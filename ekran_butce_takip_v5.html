@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ekran Bütçe Takip 2026</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, set, get, update, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDqboED0mr_JjV8Kn0YNhw5-mFpjh8HI2s",
+  authDomain: "ekran-butce-2026.firebaseapp.com",
+  databaseURL: "https://ekran-butce-2026-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "ekran-butce-2026",
+  storageBucket: "ekran-butce-2026.firebasestorage.app",
+  messagingSenderId: "567022849904",
+  appId: "1:567022849904:web:9b4a7f671fcbffde3d09b5"
+};
+
+const firebaseApp = initializeApp(firebaseConfig);
+const db = getDatabase(firebaseApp);
+
+const USERS = {
+  'nbolugur@gmail.com':       { pass: 'Frida3006 Sans',  label: 'Nilay Boluğur' },
+  'fbolugur@hotmail.com':     { pass: 'Sans3006 Frida',  label: 'Nilay B. (2)' },
+  'zerrin@limitsizmedya.com': { pass: 'Mojo2026Mondi',   label: 'Zerrin' },
+  'banu@limitsizmedya.com':   { pass: 'Kas2026Deniz',    label: 'Banu Ağabey' },
+  'vangel@limitsizmedya.com': { pass: 'Bjk1903Kartal',   label: 'Vangel' }
+};
+
+let currentUser = null;
+let DATA = [];
+
+const PHARMACIES_BASE = [{"id":1,"eczane_adi":"SANTRA ECZANESİ","bm":"UMUT YILMAN","md":"REMZİ ARGUN","md_cep":"5498287683","eczaci":"SEMİH ARSLAN","eczaci_tel":"5323725272","adres":"Santra Migros Yanı, Çayyolu, 2673. Cd. No: 8/A D:B, 06800 Çankaya","il":"ANKARA","butce":"30000","video_sure":"3 AY","ekran_2025":"EVET","arayacak_kisi":"Nilay Boluğur","arayacak_tel":"05322968645","tarih_araligi":"07.04.2026"},{"id":2,"eczane_adi":"KIZILAY MERKEZ ECZANESİ","bm":"UMUT YILMAN","md":"REMZİ ARGUN","md_cep":"5498287683","eczaci":"ERDEM TÜRKCAN","eczaci_tel":"5052910379","adres":"Kızılay, Meşrutiyet Cd. No:3/A, 06420 Çankaya","il":"ANKARA","butce":"30000","video_sure":"3 AY","ekran_2025":"EVET","arayacak_kisi":"Banu Ağabey","arayacak_tel":"05365519456","tarih_araligi":"07.04.2026"},{"id":3,"eczane_adi":"SEFEROĞLU ECZANESİ","bm":"UMUT YILMAN","md":"REMZİ ARGUN","md_cep":"5498287683","eczaci":"PINAR ÖZTULUNÇ","eczaci_tel":"5326309345","adres":"Mutlukent Mahallesi, 1920.Cadde No:71 Çayyolu / Çankaya","il":"ANKARA","butce":"20000","video_sure":"3 AY","ekran_2025":"HAYIR","arayacak_kisi":"Nilay Boluğur","arayacak_tel":"05322968645","tarih_araligi":"07.04.2026"},{"id":4,"eczane_adi":"GORDİON ECZANESİ","bm":"UMUT YILMAN","md":"REMZİ ARGUN","md_cep":"5498287683","eczaci":"IŞIL İŞCAN","eczaci_tel":"5321614139","adres":"Ankaralılar Caddesi Gordion Alışveriş Merkezi D:No : 2/B1-019 (6), Koru, 06810 Çankaya","il":"ANKARA","butce":"100000","video_sure":"3 AY","ekran_2025":"HAYIR","arayacak_kisi":"Banu Ağabey","arayacak_tel":"05365519456","tarih_araligi":"07.04.2026"},{"id":5,"eczane_adi":"ERDEM ECZANESİ","bm":"UMUT YILMAN","md":"ERDİNÇ TOPGÜNER","md_cep":"5421263207","eczaci":"Hasan Erdem","eczaci_tel":"5337371008","adres":"Mahmutlar, Barbaros Cd. No:158/B, 07450 Alanya","il":"Antalya","butce":"20000","video_sure":"3 AY","ekran_2025":"EVET","arayacak_kisi":"Nilay Boluğur","arayacak_tel":"05322968645","tarih_araligi":"07.04.2026"},{"id":6,"eczane_adi":"TEMAPARK ECZANESİ","bm":"UMUT YILMAN","md":"ERDİNÇ TOPGÜNER","md_cep":"5421263207","eczaci":"Selman Ergün","eczaci_tel":"5412130790","adres":"Land of legends avm, Kadriye, Atatürk Cd. no:1/19, 07010 Serik","il":"Antalya","butce":"20000","video_sure":"3 AY","ekran_2025":"EVET","arayacak_kisi":"Banu Ağabey","arayacak_tel":"05365519456","tarih_araligi":"07.04.2026"},{"id":7,"eczane_adi":"MÜJGAN ECZANESİ","bm":"UMUT YILMAN","md":"ERDİNÇ TOPGÜNER","md_cep":"5421263207","eczaci":"Müjgan Çubuk","eczaci_tel":"5324106215","adres":"TAHILPAZARI MAHALLESİ ŞARAMPOL CADDESİ MARK ANTALYA AVM ZK48 NO:84, 07010 Muratpaşa","il":"Antalya","butce":"20000","video_sure":"3 AY","ekran_2025":"EVET","arayacak_kisi":"Nilay Boluğur","arayacak_tel":"05322968645","tarih_araligi":"07.04.2026"},{"id":8,"eczane_adi":"YILMAZ ECZANESİ","bm":"UMUT YILMAN","md":"ERDİNÇ TOPGÜNER","md_cep":"5421263207","eczaci":"Ali Edis","eczaci_tel":"5324713628","adres":"Oba göl mevkii, fatih cad. çetin apartmanı 19/c, 07400 Alanya","il":"Antalya","butce":"20000","video_sure":"3 AY","ekran_2025":"EVET","arayacak_kisi":"Banu Ağabey","arayacak_tel":"05365519456","tarih_araligi":"07.04.2026"},{"id":9,"eczane_adi":"AKDENİZ PARK ECZANESİ","bm":"UMUT YILMAN","md":"ERDİNÇ TOPGÜNER","md_cep":"5421273207","eczaci":"Onur Özgüven","eczaci_tel":"5306696673","adres":"Akdeniz Park AVM Mahmutlar Mahallesi, 130 Sokak No:3/Z-1 Alanya","il":"Antalya","butce":"20000","video_sure":"3 AY","ekran_2025":"EVET","arayacak_kisi":"Nilay Boluğur","arayacak_tel":"05322968645","tarih_araligi":"07.04.2026"},{"id":10,"eczane_adi":"İKLİM ECZANESİ","bm":"UMUT YILMAN","md":"ERDİNÇ TOPGÜNER","md_cep":"5421263207","eczaci":"Süleyman Yıldıran","eczaci_tel":"5356530320","adres":"Yenigöl, Antalya Havaalanı Dış Hatlar Terminali 1 Pk:07025, 07025 Muratpaşa","il":"Antalya","butce":"20000","video_sure":"3 AY","ekran_2025":"HAYIR","arayacak_kisi":"Banu Ağabey","arayacak_tel":"05365519456","tarih_araligi":"07.04.2026"},{"id":11,"eczane_adi":"DEFNE ECZANESİ","bm":"UMUT YILMAN","md":"SERDAR ÜLKER","md_cep":"05059422635","eczaci":"MEVLÜTCAN TEKELİ","eczaci_tel":"5526588660","adres":"Bostanlı mah Yalı Bulvarı No:528/B Karşıyaka","il":"İzmir","butce":"20000","video_sure":"3 AY","ekran_2025":"HAYIR","arayacak_kisi":"Nilay Boluğur","arayacak_tel":"05322968645","tarih_araligi":"08.04.2026"},{"id":12,"eczane_adi":"OASİS ECZANESİ","bm":"UMUT YILMAN","md":"SERDAR ÜLKER","md_cep":"05059422635","eczaci":"ŞÜKRÜ UTKU ÖZDEMİR","eczaci_tel":"5425420005","adres":"Mavişehir mah. Aziz Nesin Bulvarı No:127/D Karşıyaka","il":"İzmir","butce":"20000","video_sure":"3 AY","ekran_2025":"HAYIR","arayacak_kisi":"Banu Ağabey","arayacak_tel":"05365519456","tarih_araligi":"08.04.2026"},{"id":13,"eczane_adi":"DENİZ BOSTANLI ECZANESİ","bm":"UMUT YILMAN","md":"SERDAR ÜLKER","md_cep":"05059422635","eczaci":"İBRAHİM DERE","eczaci_tel":"5321777567","adres":"Bostanlı mah. 1820/1 sok. No:2/A Karşıyaka","il":"İzmir","butce":"20000","video_sure":"3 AY","ekran_2025":"EVET","arayacak_kisi":"Nilay Boluğur","arayacak_tel":"05322968645","tarih_araligi":"08.04.2026"},{"id":14,"eczane_adi":"ORGANİK ECZANESİ","bm":"UMUT YILMAN","md":"SERDAR ÜLKER","md_cep":"05059422635","eczaci":"SEDA KARAKAŞ","eczaci_tel":"5055610080","adres":"Mavişehir mah. Caher Dudayev Bulvarı No:40 Karşıyaka","il":"İzmir","butce":"125000","video_sure":"3 AY","ekran_2025":"EVET","arayacak_kisi":"Banu Ağabey","arayacak_tel":"05365519456","tarih_araligi":"08.04.2026"},{"id":15,"eczane_adi":"MAVİ ŞEHİR ECZANESİ","bm":"UMUT YILMAN","md":"SERDAR ÜLKER","md_cep":"05059422635","eczaci":"YEŞİM MUTLU DEDELER","eczaci_tel":"5547557791","adres":"Yalı mah. Ahmet Kemal Baysak Bulvarı No:14/B Karşıyaka","il":"İzmir","butce":"20000","video_sure":"3 AY","ekran_2025":"HAYIR","arayacak_kisi":"Nilay Boluğur","arayacak_tel":"05322968645","tarih_araligi":"08.04.2026"},{"id":16,"eczane_adi":"KESKİN ECZANESİ","bm":"UMUT YILMAN","md":"SERDAR ÜLKER","md_cep":"05059422635","eczaci":"M. ERDINÇ KESKİN","eczaci_tel":"5324411514","adres":"Bahçelievler mah. Mehmet Hilmi Cad. No:15-1 Turgutreis","il":"Muğla/Bodrum","butce":"35000","video_sure":"3 AY","ekran_2025":"HAYIR","arayacak_kisi":"Banu Ağabey","arayacak_tel":"05365519456","tarih_araligi":"08.04.2026"},{"id":17,"eczane_adi":"ATA MERT","bm":"UMUT YILMAN","md":"NURCAN TİRAVOĞLU","md_cep":"5494788121","eczaci":"MERT ERDOĞAN","eczaci_tel":"5387998116","adres":"MİTHATPAŞA CD NO: 1176/A GÜZELYALI KONAK","il":"İZMİR","butce":"20000","video_sure":"3 AY","ekran_2025":"HAYIR","arayacak_kisi":"Nilay Boluğur","arayacak_tel":"05322968645","tarih_araligi":"08.04.2026"},{"id":18,"eczane_adi":"RİTİM ECZANESİ","bm":"UMUT YILMAN","md":"NURCAN TİRAVOĞLU","md_cep":"5494788121","eczaci":"BERSUN AKAT ERZİNCAN","eczaci_tel":"5525033742","adres":"KAHRAMANDERE MAH ATA CD RİTİM EGELİ KONUTLARI NO:52/C GÜZELBAHÇE","il":"İZMİR","butce":"20000","video_sure":"3 AY","ekran_2025":"HAYIR","arayacak_kisi":"Banu Ağabey","arayacak_tel":"05365519456","tarih_araligi":"08.04.2026"},{"id":19,"eczane_adi":"YENİ ÇETİNER","bm":"UMUT YILMAN","md":"NURCAN TİRAVOĞLU","md_cep":"5494788121","eczaci":"EMİNE AĞCA","eczaci_tel":"5337178532","adres":"ATIFBEY MAH. PROF DR TÜRKAN SAYLAN CD NO:15A GAZİEMİR","il":"İZMİR","butce":"20000","video_sure":"3 AY","ekran_2025":"HAYIR","arayacak_kisi":"Nilay Boluğur","arayacak_tel":"05322968645","tarih_araligi":"08.04.2026"},{"id":20,"eczane_adi":"GÜVEN","bm":"UMUT YILMAN","md":"NURCAN TİRAVOĞLU","md_cep":"5494788121","eczaci":"BUKET PALA","eczaci_tel":"5079640401","adres":"AYDIN CD. NO:118 1A MEDİFEMA HASTANESİ ACİL KARŞISI AYRANCILAR TORBALI","il":"İZMİR","butce":"20000","video_sure":"3 AY","ekran_2025":"HAYIR","arayacak_kisi":"Banu Ağabey","arayacak_tel":"05365519456","tarih_araligi":"08.04.2026"},{"id":21,"eczane_adi":"ERAY ÖLÜDENİZ ECZANESİ","bm":"UMUT YILMAN","md":"NURCAN TİRAVOĞLU","md_cep":"5494788121","eczaci":"EZGİ EŞENÇAYI","eczaci_tel":"5068385090","adres":"ÇARŞI CD NO:6 ÖLÜDENİZ FETHİYE","il":"MUĞLA","butce":"50000","video_sure":"3 AY","ekran_2025":"HAYIR","arayacak_kisi":"Nilay Boluğur","arayacak_tel":"05322968645","tarih_araligi":"09.04.2026"},{"id":22,"eczane_adi":"ŞİFA ECZANESİ","bm":"UMUT YILMAN","md":"SEYİTHAN KAAN ERDEMOĞLU","md_cep":"5073208453","eczaci":"SERHAT MANKULİ","eczaci_tel":"5330295121","adres":"Halkkent, Fatih Sultan Mehmet Blv. No:25, 33230 Toroslar","il":"Mersin","butce":"35000","video_sure":"3 AY","ekran_2025":"HAYIR","arayacak_kisi":"Banu Ağabey","arayacak_tel":"05365519456","tarih_araligi":"09.04.2026"},{"id":23,"eczane_adi":"ADANA ECZANESİ","bm":"UMUT YILMAN","md":"SEYİTHAN KAAN ERDEMOĞLU","md_cep":"5073208453","eczaci":"FATİH DEMİRBAŞ","eczaci_tel":"5070210922","adres":"Gürselpaşa, Şehit Polis Şahin Polat Aydın Bl. NO:16/A A BLOK, 01200 Seyhan","il":"Adana","butce":"10000","video_sure":"3 AY","ekran_2025":"HAYIR","arayacak_kisi":"Nilay Boluğur","arayacak_tel":"05322968645","tarih_araligi":"09.04.2026"},{"id":24,"eczane_adi":"HÜLYA TOTİK ECZANESİ","bm":"UMUT YILMAN","md":"SEYİTHAN KAAN ERDEMOĞLU","md_cep":"5073208453","eczaci":"HÜLYA TOTİK","eczaci_tel":"5358755757","adres":"Mahfesığmaz, Turgut Özal Blv. No:133 D:G, 01170 Çukurova","il":"Adana","butce":"10000","video_sure":"3 AY","ekran_2025":"HAYIR","arayacak_kisi":"Banu Ağabey","arayacak_tel":"05365519456","tarih_araligi":"09.04.2026"},{"id":25,"eczane_adi":"FEHİMAN ECZANESİ","bm":"UMUT YILMAN","md":"SEYİTHAN KAAN ERDEMOĞLU","md_cep":"5073208453","eczaci":"MEHMET KAHYALAR","eczaci_tel":"5395008989","adres":"Reşatbey, Atatürk Cad. No:40, 01120 Seyhan","il":"Adana","butce":"10000","video_sure":"3 AY","ekran_2025":"HAYIR","arayacak_kisi":"Nilay Boluğur","arayacak_tel":"05322968645","tarih_araligi":"09.04.2026"},{"id":26,"eczane_adi":"PLATİN ECZANESİ","bm":"UMUT YILMAN","md":"ARDA AKMAN","md_cep":"5343075738","eczaci":"","eczaci_tel":"","adres":"","il":"İzmir","butce":"75000","video_sure":"3 AY","ekran_2025":"EVET","arayacak_kisi":"Banu Ağabey","arayacak_tel":"05365519456","tarih_araligi":"09.04.2026"},{"id":27,"eczane_adi":"ANTALYA MODERN","bm":"UMUT YILMAN","md":"DENİZ YILMAZ","md_cep":"5306095248","eczaci":"Ugur Yaşar Can","eczaci_tel":"5327322109","adres":"Liman Mahallesi, Boğaçayı Caddesi No:36/A Konyaaltı","il":"Antalya","butce":"70000","video_sure":"3 AY","ekran_2025":"EVET","arayacak_kisi":"Nilay Boluğur","arayacak_tel":"05322968645","tarih_araligi":"09.04.2026"},{"id":28,"eczane_adi":"TALYASU","bm":"UMUT YILMAN","md":"DENİZ YILMAZ","md_cep":"5306095248","eczaci":"Engin Yavuz","eczaci_tel":"5446886082","adres":"Liman Mahallesi, 20 Sokak, Derya Apt. No:13/1 Konyaaltı","il":"Antalya","butce":"25000","video_sure":"3 AY","ekran_2025":"HAYIR","arayacak_kisi":"Banu Ağabey","arayacak_tel":"05365519456","tarih_araligi":"09.04.2026"},{"id":29,"eczane_adi":"DURU","bm":"UMUT YILMAN","md":"DENİZ YILMAZ","md_cep":"5306095248","eczaci":"Sibel Gökçay","eczaci_tel":"5383285299","adres":"Altınkum Mahallesi, Gazi Mustafa Kemal Bulvarı No:18/A Konyaaltı","il":"Antalya","butce":"10000","video_sure":"3 AY","ekran_2025":"EVET","arayacak_kisi":"Nilay Boluğur","arayacak_tel":"05322968645","tarih_araligi":"09.04.2026"},{"id":30,"eczane_adi":"NATURA","bm":"UMUT YILMAN","md":"DENİZ YILMAZ","md_cep":"5306095248","eczaci":"Aylin Aksu","eczaci_tel":"5066647969","adres":"Beldibi, Başkomutan Atatürk Caddesi No:480-C, 07985 Kemer","il":"Antalya","butce":"10000","video_sure":"3 AY","ekran_2025":"EVET","arayacak_kisi":"Banu Ağabey","arayacak_tel":"05365519456","tarih_araligi":"09.04.2026"},{"id":31,"eczane_adi":"Akmerkez Eczanesi","bm":"MUSTAFA DÖNMEZ","md":"OLCAY TİRYAKİ","md_cep":"5413202678","eczaci":"ADİLE ÖZDAĞ (İZLEM HANIM İLGİLENECEK)","eczaci_tel":"0530 320 31 15","adres":"Kültür, Nisbetiye Cd No:56, 34340 Beşiktaş/İstanbul","il":"İSTANBUL","butce":"200000","video_sure":"3 AY","ekran_2025":"EVET","arayacak_kisi":"Nilay Boluğur","arayacak_tel":"05322968645","tarih_araligi":"10.04.2026"},{"id":32,"eczane_adi":"Zorlu Eczanesi","bm":"MUSTAFA DÖNMEZ","md":"OLCAY TİRYAKİ","md_cep":"5413202678","eczaci":"PINAR ARI ŞENTUĞ","eczaci_tel":"0533 742 63 08","adres":"Levazım Mahallesi, Koru Sokak, No:2/139 Beşiktaş / İstanbul","il":"İSTANBUL","butce":"100000","video_sure":"3 AY","ekran_2025":"HAYIR","arayacak_kisi":"Banu Ağabey","arayacak_tel":"05365519456","tarih_araligi":"10.04.2026"},{"id":33,"eczane_adi":"Galataport Eczanesi","bm":"MUSTAFA DÖNMEZ","md":"İBRAHİM HULUSİ ERGÜLER","md_cep":"5424488662","eczaci":"AYŞE DİLMEN","eczaci_tel":"532 414 1990","adres":"Kılıçali Paşa, Meclis-i Mebusan Cd. No:8 E Blok 10/A, 34433 Beyoğlu/İstanbul","il":"İSTANBUL","butce":"150000","video_sure":"3 AY","ekran_2025":"HAYIR","arayacak_kisi":"Nilay Boluğur","arayacak_tel":"05322968645","tarih_araligi":"10.04.2026"},{"id":34,"eczane_adi":"Vadi istanbul eczanesi","bm":"MUSTAFA DÖNMEZ","md":"İBRAHİM HULUSİ ERGÜLER","md_cep":"5424488662","eczaci":"ŞENEL KANDEMİR GÜLDÜ","eczaci_tel":"532 718 46 55","adres":"Ayazağa, Azerbaycan Cd. 3/C, 34475 Sarıyer/İstanbul","il":"İSTANBUL","butce":"80000","video_sure":"3 AY","ekran_2025":"EVET","arayacak_kisi":"Banu Ağabey","arayacak_tel":"05365519456","tarih_araligi":"10.04.2026"},{"id":35,"eczane_adi":"Günce Eczanesi","bm":"MUSTAFA DÖNMEZ","md":"OLCAY TİRYAKİ","md_cep":"5413202678","eczaci":"GÜNCE ALİMOĞLU","eczaci_tel":"0532 254 49 90","adres":"Ortaköy Mahallesi, Dereboyu Caddesi No:4/A Ortaköy / Beşiktaş / İstanbul","il":"İSTANBUL","butce":"30000","video_sure":"3 AY","ekran_2025":"HAYIR","arayacak_kisi":"Nilay Boluğur","arayacak_tel":"05322968645","tarih_araligi":"10.04.2026"},{"id":36,"eczane_adi":"Kanyon eczanesi","bm":"MUSTAFA DÖNMEZ","md":"OLCAY TİRYAKİ","md_cep":"5413202678","eczaci":"KAMBER ÇAL","eczaci_tel":"0533 496 47 45","adres":"Esentepe Mahallesi, Büyükdere Caddesi No:185 Şişli / İstanbul","il":"İSTANBUL","butce":"30000","video_sure":"3 AY","ekran_2025":"EVET","arayacak_kisi":"Banu Ağabey","arayacak_tel":"05365519456","tarih_araligi":"10.04.2026"},{"id":37,"eczane_adi":"İnternational Eczanesi","bm":"MUSTAFA DÖNMEZ","md":"İBRAHİM HULUSİ ERGÜLER","md_cep":"5424488662","eczaci":"NAFİZ TARHAN (ERSAN BEY YETKİLİ)","eczaci_tel":"533 306 36 32","adres":"İSTANBUL HAVALİMANI TERMİNAL CADDESİ NO:1 İÇ KAPI NO:740519","il":"İSTANBUL","butce":"70000","video_sure":"3 AY","ekran_2025":"HAYIR","arayacak_kisi":"Nilay Boluğur","arayacak_tel":"05322968645","tarih_araligi":"10.04.2026"},{"id":38,"eczane_adi":"Serap Eczanesi","bm":"MUSTAFA DÖNMEZ","md":"MELİH COŞKUN","md_cep":"5326000744","eczaci":"Serap Nart","eczaci_tel":"532 431 18 35","adres":"Acarlar, Necmettin Özer Viyadüğü ACR Loft AVM No 2 34800 Beykoz","il":"İSTANBUL","butce":"50000","video_sure":"3 AY","ekran_2025":"HAYIR","arayacak_kisi":"Banu Ağabey","arayacak_tel":"05365519456","tarih_araligi":"10.04.2026"},{"id":39,"eczane_adi":"Akbatı Eczanesi","bm":"MUSTAFA DÖNMEZ","md":"UĞUR KINAY","md_cep":"5303871856","eczaci":"HALE ELMAS","eczaci_tel":"544 226 3000 (MÜSLÜM BEY)","adres":"Koza Mahallesi, 1655.Sokak No:485/19 AKBATI AVM Esenyurt / İstanbul","il":"İSTANBUL","butce":"80000","video_sure":"3 AY","ekran_2025":"EVET","arayacak_kisi":"Nilay Boluğur","arayacak_tel":"05322968645","tarih_araligi":"10.04.2026"},{"id":40,"eczane_adi":"Funda Eczanesi","bm":"MUSTAFA DÖNMEZ","md":"UĞUR KINAY","md_cep":"5303871856","eczaci":"FUNDA PALALI","eczaci_tel":"542 4093840","adres":"19 Mayıs E5 Büyükçekmece İstanbul Atirus AVM Altı","il":"İSTANBUL","butce":"50000","video_sure":"3 AY","ekran_2025":"EVET","arayacak_kisi":"Banu Ağabey","arayacak_tel":"05365519456","tarih_araligi":"10.04.2026"},{"id":41,"eczane_adi":"Korupark eczanesi","bm":"MUSTAFA DÖNMEZ","md":"ERKAM ÇANKAYA","md_cep":"5075038101","eczaci":"GÖKHAN ZENGİN","eczaci_tel":"532 416 28 66","adres":"Emek Adnan Menderes Mahallesi, Korupark AVM Zemin Kat No:62 Osmangazi / Bursa","il":"BURSA","butce":"120000","video_sure":"3 AY","ekran_2025":"HAYIR","arayacak_kisi":"Nilay Boluğur","arayacak_tel":"05322968645","tarih_araligi":"11.04.2026"},{"id":42,"eczane_adi":"Ayça Eczanesi","bm":"MUSTAFA DÖNMEZ","md":"ERKAM ÇANKAYA","md_cep":"5075038101","eczaci":"AYÇA SEZGİN DEMİRYÜREK","eczaci_tel":"532 400 54 36","adres":"Eskibağlar Mahallesi, Üniversite Caddesi No:21/Z-39 Tepebaşı / Eskişehir","il":"BURSA","butce":"20000","video_sure":"3 AY","ekran_2025":"HAYIR","arayacak_kisi":"Banu Ağabey","arayacak_tel":"05365519456","tarih_araligi":"11.04.2026"},{"id":43,"eczane_adi":"Hilal Eczanesi","bm":"MUSTAFA DÖNMEZ","md":"ERKAM ÇANKAYA","md_cep":"5075038101","eczaci":"HİLAL YUĞAÇ KURAL","eczaci_tel":"537 457 57 77","adres":"Odunluk Mahallesi, Akpınar Caddesi, No:12/A-D5 Nilüfer / Bursa","il":"BURSA","butce":"20000","video_sure":"3 AY","ekran_2025":"HAYIR","arayacak_kisi":"Nilay Boluğur","arayacak_tel":"05322968645","tarih_araligi":"11.04.2026"},{"id":44,"eczane_adi":"Ayşe Abacı Eczanesi","bm":"MUSTAFA DÖNMEZ","md":"MEHMET ONUR YILMAZ","md_cep":"5302806101","eczaci":"AYŞE ABACI","eczaci_tel":"5422231079","adres":"Güzelyalı mah Atatürk bulvarı 3.kısım no 98/b Atakum","il":"SAMSUN","butce":"15000","video_sure":"3 AY","ekran_2025":"HAYIR","arayacak_kisi":"Banu Ağabey","arayacak_tel":"05365519456","tarih_araligi":"11.04.2026"},{"id":45,"eczane_adi":"Vural Eczanesi","bm":"MUSTAFA DÖNMEZ","md":"MEHMET ONUR YILMAZ","md_cep":"5302806101","eczaci":"VURAL ÇETİN","eczaci_tel":"5349546387","adres":"Yenimahalle mah Atatürk bulvarı yanyolu no131 Atakum","il":"SAMSUN","butce":"15000","video_sure":"3 AY","ekran_2025":"HAYIR","arayacak_kisi":"Nilay Boluğur","arayacak_tel":"05322968645","tarih_araligi":"11.04.2026"},{"id":46,"eczane_adi":"Tepe eczanesi","bm":"MUSTAFA DÖNMEZ","md":"MEHMET ONUR YILMAZ","md_cep":"5302806101","eczaci":"UMUT TEPE","eczaci_tel":"5323562419","adres":"Düz mah hükümet caddesi no17 posta kodu 52100 Altınordu","il":"ORDU","butce":"15000","video_sure":"3 AY","ekran_2025":"HAYIR","arayacak_kisi":"Banu Ağabey","arayacak_tel":"05365519456","tarih_araligi":"11.04.2026"},{"id":47,"eczane_adi":"Mimar Sinan","bm":"MUSTAFA DÖNMEZ","md":"MEHMET ONUR YILMAZ","md_cep":"5302806101","eczaci":"BERKAY KÖSEOĞLU","eczaci_tel":"5464083913","adres":"Mevlana mah 739.sokak 4/A Atakum","il":"SAMSUN","butce":"15000","video_sure":"3 AY","ekran_2025":"HAYIR","arayacak_kisi":"Nilay Boluğur","arayacak_tel":"05322968645","tarih_araligi":"11.04.2026"},{"id":48,"eczane_adi":"EminÖnü Eczanesi","bm":"MUSTAFA DÖNMEZ","md":"BURAK CAN KARACA","md_cep":"5369428429","eczaci":"ESAT UZUN","eczaci_tel":"5342913210","adres":"Tahtakale, Hasırcılar Cd. No:30, 34116 EMİNÖNÜ/İstanbul","il":"İSTANBUL","butce":"50000","video_sure":"3 AY","ekran_2025":"HAYIR","arayacak_kisi":"Banu Ağabey","arayacak_tel":"05365519456","tarih_araligi":"11.04.2026"},{"id":49,"eczane_adi":"Tanyer Eczanesi","bm":"MUSTAFA DÖNMEZ","md":"ERMAN AYDIN","md_cep":"5369428429","eczaci":"GÜRSEL TANYER","eczaci_tel":"5332816579","adres":"Selamiçeşme, Bağdat Cad.No:185/A Kadıköy / İstanbul","il":"İSTANBUL","butce":"25000","video_sure":"3 AY","ekran_2025":"EVET","arayacak_kisi":"Nilay Boluğur","arayacak_tel":"05322968645","tarih_araligi":"11.04.2026"},{"id":50,"eczane_adi":"Elit Eczanesi","bm":"MUSTAFA DÖNMEZ","md":"ERMAN AYDIN","md_cep":"5369428429","eczaci":"ÖMER SARIŞIN","eczaci_tel":"5372390164","adres":"Göztepe mah.Bağdat Cad.No:209/A Kadıköy /istanbul","il":"İSTANBUL","butce":"25000","video_sure":"3 AY","ekran_2025":"EVET","arayacak_kisi":"Banu Ağabey","arayacak_tel":"05365519456","tarih_araligi":"11.04.2026"},{"id":51,"eczane_adi":"Kitapçı eczanesi","bm":"MUSTAFA DÖNMEZ","md":"MEHMET ONUR YILMAZ","md_cep":"5302806101","eczaci":"ELÇİM KİTAPÇI AĞDERE","eczaci_tel":"5307800302","adres":"Şeyh keramettin mah gazi cad no12 posta kodu 28200 merkez","il":"GİRESUN","butce":"20000","video_sure":"3 AY","ekran_2025":"HAYIR","arayacak_kisi":"Nilay Boluğur","arayacak_tel":"05322968645","tarih_araligi":"13.04.2026"},{"id":52,"eczane_adi":"PANDORA ECZANESİ","bm":"UMUT YILMAN","md":"ARDA AKMAN","md_cep":"5343075738","eczaci":"BARIN ÖZEL","eczaci_tel":"5335802753","adres":"Uncubozköy Mahallesi, 5526.Sokak No:12/B Yunusemre","il":"MANİSA","butce":"40000","video_sure":"3 AY","ekran_2025":"HAYIR","arayacak_kisi":"Banu Ağabey","arayacak_tel":"05365519456","tarih_araligi":"13.04.2026"},{"id":53,"eczane_adi":"KOÇ EKİM ECZANESİ","bm":"UMUT YILMAN","md":"SEÇKİN HARMANDA","md_cep":"5350252147","eczaci":"Mahi Gül Koç","eczaci_tel":"0 543 239 21 07","adres":"No:5, Batıkent Kentkoop Mahallesi 1844 Sokak, 06370 Yenimahalle","il":"ANKARA","butce":"20000","video_sure":"3 AY","ekran_2025":"EVET","arayacak_kisi":"Nilay Boluğur","arayacak_tel":"05322968645","tarih_araligi":"13.04.2026"},{"id":54,"eczane_adi":"GÖKÇE CEREN ECZANESİ","bm":"UMUT YILMAN","md":"SEÇKİN HARMANDA","md_cep":"5350252147","eczaci":"Gökçe Ceren Büyükseymen","eczaci_tel":"5512326551","adres":"Migros yanı, Bağlıca, Bağlıca Blv. 24/A G no:3, 06790 Etimesgut","il":"ANKARA","butce":"15000","video_sure":"3 AY","ekran_2025":"HAYIR","arayacak_kisi":"Banu Ağabey","arayacak_tel":"05365519456","tarih_araligi":"13.04.2026"}];
+
+const TRACK_DEFAULTS = {
+  saha_bilgi:'', arandi:'', teklif:'', revize_fiyat:'', yeniden_arama:'',
+  belgeler:'', video_paylasim:'', fatura:'', fatura_tarihi:'', vade_sonu:'',
+  odeme:'', odeme_suresi:'', ekran_cesidi:'', ekran_boyutu:'', notlar:''
+};
+
+// ========== HELPERS ==========
+function parseTR(dateStr) {
+  if (!dateStr) return null;
+  const parts = dateStr.split('.');
+  if (parts.length !== 3) return null;
+  return new Date(+parts[2], +parts[1]-1, +parts[0]);
+}
+function addDays(date, n) {
+  const d = new Date(date);
+  d.setDate(d.getDate() + n);
+  return d;
+}
+function formatTR(date) {
+  if (!date) return '';
+  const d = date.getDate().toString().padStart(2,'0');
+  const m = (date.getMonth()+1).toString().padStart(2,'0');
+  return `${d}.${m}.${date.getFullYear()}`;
+}
+function daysUntil(dateStr) {
+  const d = parseTR(dateStr);
+  if (!d) return null;
+  const today = new Date(); today.setHours(0,0,0,0);
+  return Math.round((d - today) / 86400000);
+}
+
+// ========== FIREBASE ==========
+async function initData() {
+  showLoading('Veriler yükleniyor...');
+  const snapshot = await get(ref(db, 'eczaneler'));
+  if (snapshot.exists()) {
+    const fbData = snapshot.val();
+    DATA = PHARMACIES_BASE.map(p => ({ ...p, ...TRACK_DEFAULTS, ...(fbData[`e${p.id}`]||{}) }));
+  } else {
+    DATA = PHARMACIES_BASE.map(p => ({ ...p, ...TRACK_DEFAULTS }));
+    await saveAllToFirebase();
+  }
+  hideLoading();
+  onValue(ref(db, 'eczaneler'), (snapshot) => {
+    if (!snapshot.exists()) return;
+    const fbData = snapshot.val();
+    DATA = PHARMACIES_BASE.map(p => ({ ...p, ...TRACK_DEFAULTS, ...(fbData[`e${p.id}`]||{}) }));
+    if (document.getElementById('page-dashboard').classList.contains('active')) renderDashboard();
+    if (document.getElementById('page-tablo').classList.contains('active')) renderTableRows();
+    if (document.getElementById('page-gorev').classList.contains('active')) renderGorev();
+  });
+}
+
+async function saveAllToFirebase() {
+  const updates = {};
+  DATA.forEach(d => { updates[`eczaneler/e${d.id}`] = getTrackFields(d); });
+  await update(ref(db), updates);
+}
+
+function getTrackFields(d) {
+  return {
+    saha_bilgi:d.saha_bilgi||'', arandi:d.arandi||'', teklif:d.teklif||'',
+    revize_fiyat:d.revize_fiyat||'', yeniden_arama:d.yeniden_arama||'',
+    belgeler:d.belgeler||'', video_paylasim:d.video_paylasim||'',
+    fatura:d.fatura||'', fatura_tarihi:d.fatura_tarihi||'', vade_sonu:d.vade_sonu||'',
+    odeme:d.odeme||'', odeme_suresi:d.odeme_suresi||'',
+    ekran_cesidi:d.ekran_cesidi||'', ekran_boyutu:d.ekran_boyutu||'',
+    notlar:d.notlar||'', arayacak_kisi:d.arayacak_kisi||'', tarih_araligi:d.tarih_araligi||''
+  };
+}
+
+async function saveOneToFirebase(d) {
+  await set(ref(db, `eczaneler/e${d.id}`), getTrackFields(d));
+}
+
+function showLoading(msg) { document.getElementById('loading-overlay').style.display='flex'; document.getElementById('loading-msg').textContent=msg||'Yükleniyor...'; }
+function hideLoading() { document.getElementById('loading-overlay').style.display='none'; }
+
+// ========== WINDOW EXPORTS ==========
+window.doLogin = async function() {
+  const email = document.getElementById('login-email').value.trim();
+  const pass = document.getElementById('login-pass').value;
+  const u = USERS[email];
+  if (u && u.pass === pass) {
+    currentUser = { email, label: u.label };
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('app').style.display='block';
+    document.getElementById('user-label').textContent=u.label;
+    document.getElementById('user-email-badge').textContent=email;
+    await initData();
+    renderDashboard();
+  } else { document.getElementById('login-err').textContent='E-posta veya şifre hatalı.'; }
+};
+window.doLogout = function() {
+  currentUser=null;
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('app').style.display='none';
+};
+window.showPage = function(name) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  ['dashboard','tablo','gorev','export'].forEach((n,i)=>{ if(n===name) document.querySelectorAll('.tab')[i].classList.add('active'); });
+  if(name==='dashboard') renderDashboard();
+  if(name==='tablo') renderTable();
+  if(name==='gorev') renderGorev();
+};
+window.filterAndShow = function(field,val) {
+  window.showPage('tablo');
+  setTimeout(()=>{ if(field==='arandi') document.getElementById('filter-arandi').value=val; filterTable(); },50);
+};
+window.filterTable = ()=>filterTable();
+window.openModal = (id)=>openModal(id);
+window.closeModal = ()=>closeModal();
+window.saveModal = ()=>saveModal();
+window.exportExcel = ()=>exportExcel();
+window.onFaturaTarihi = ()=>onFaturaTarihi();
+
+// ========== DASHBOARD ==========
+function renderDashboard() {
+  const total=DATA.length;
+  const arandi=DATA.filter(d=>d.arandi==='EVET').length;
+  const belgeler=DATA.filter(d=>d.belgeler==='EVET').length;
+  const fatura=DATA.filter(d=>d.fatura==='EVET').length;
+  const odeme=DATA.filter(d=>d.odeme==='EVET').length;
+  const video=DATA.filter(d=>d.video_paylasim==='EVET').length;
+  const yeniden=DATA.filter(d=>d.yeniden_arama&&d.yeniden_arama.trim()!=='').length;
+  const kabul=DATA.filter(d=>d.teklif==='KABUL').length;
+  const revize=DATA.filter(d=>d.teklif==='REVİZE').length;
+  const saha=DATA.filter(d=>d.saha_bilgi==='EVET').length;
+  const ekranCesidi=DATA.filter(d=>d.ekran_cesidi&&d.ekran_cesidi!=='').length;
+
+  // Vade uyarıları
+  const uyarilar = DATA.filter(d => {
+    if (!d.vade_sonu) return false;
+    const kalan = daysUntil(d.vade_sonu);
+    return kalan !== null && kalan >= 0 && kalan <= 4;
+  });
+
+  let uyariHtml = '';
+  if (uyarilar.length > 0) {
+    uyariHtml = `<div class="vade-uyari-box">
+      <div class="vade-uyari-title">⚠️ VADESİ YAKLAŞAN FATURA${uyarilar.length>1?'LAR':''} — ${uyarilar.length} ECZANE</div>
+      ${uyarilar.map(d=>{
+        const kalan=daysUntil(d.vade_sonu);
+        const renk=kalan===0?'#9b2335':kalan<=2?'#c47c00':'#1d4e89';
+        return `<div class="vade-uyari-item" style="border-left:3px solid ${renk}">
+          <strong>${d.eczane_adi}</strong>
+          <span>Vade: <b>${d.vade_sonu}</b> — <b style="color:${renk}">${kalan===0?'BUGÜN!':kalan+' gün kaldı'}</b></span>
+          <button class="btn btn-outline" style="padding:3px 10px;font-size:11px" onclick="openModal(${d.id})">Düzenle</button>
+        </div>`;
+      }).join('')}
+    </div>`;
+  }
+
+  document.getElementById('dash-uyari').innerHTML = uyariHtml;
+
+  document.getElementById('stat-cards').innerHTML = `
+    <div class="stat-card blue" onclick="showPage('tablo')"><div class="val">${total}</div><div class="lbl">Toplam Eczane</div></div>
+    <div class="stat-card green" onclick="filterAndShow('arandi','EVET')"><div class="val">${arandi}</div><div class="lbl">Aranan</div></div>
+    <div class="stat-card red"><div class="val">${total-arandi}</div><div class="lbl">Aranmayan</div></div>
+    <div class="stat-card green"><div class="val">${belgeler}</div><div class="lbl">Belge Geldi</div></div>
+    <div class="stat-card orange"><div class="val">${fatura}</div><div class="lbl">Fatura Kesildi</div></div>
+    <div class="stat-card green"><div class="val">${odeme}</div><div class="lbl">Ödeme Yapıldı</div></div>
+    <div class="stat-card blue"><div class="val">${video}</div><div class="lbl">Video Paylaşıldı</div></div>
+    <div class="stat-card orange"><div class="val">${yeniden}</div><div class="lbl">Yeniden Arama</div></div>
+    <div class="stat-card blue"><div class="val">${ekranCesidi}</div><div class="lbl">Ekran Çeşidi Girilen</div></div>
+    <div class="stat-card orange"><div class="val">${uyarilar.length}</div><div class="lbl">Vade Uyarısı</div></div>
+  `;
+
+  document.getElementById('progress-block').innerHTML = `
+    ${makeProgress('Saha Bilgi Verdi',saha,total,'blue')}
+    ${makeProgress('Arandı',arandi,total,'green')}
+    ${makeProgress('Teklif Kabul',kabul,total,'green')}
+    ${makeProgress('Teklif Revize',revize,total,'orange')}
+    ${makeProgress('Belgeler Geldi',belgeler,total,'green')}
+    ${makeProgress('Video Paylaşıldı',video,total,'blue')}
+    ${makeProgress('Fatura Kesildi',fatura,total,'orange')}
+    ${makeProgress('Ödeme Yapıldı',odeme,total,'green')}
+  `;
+
+  const callers=['Nilay Boluğur','Banu Ağabey'];
+  document.getElementById('caller-cards').innerHTML=callers.map(c=>{
+    const mine=DATA.filter(d=>d.arayacak_kisi===c);
+    const ma=mine.filter(d=>d.arandi==='EVET').length;
+    const mb=mine.filter(d=>d.belgeler==='EVET').length;
+    const mf=mine.filter(d=>d.fatura==='EVET').length;
+    const mo=mine.filter(d=>d.odeme==='EVET').length;
+    return `<div class="caller-card">
+      <div class="caller-name">${c}</div>
+      <div class="caller-tel">${mine[0]?.arayacak_tel||''}</div>
+      <div class="caller-stats">
+        <div class="caller-stat"><div class="n" style="color:var(--blue)">${mine.length}</div><div class="t">Toplam</div></div>
+        <div class="caller-stat"><div class="n" style="color:var(--green)">${ma}</div><div class="t">Aranan</div></div>
+        <div class="caller-stat"><div class="n" style="color:var(--green)">${mb}</div><div class="t">Belge</div></div>
+        <div class="caller-stat"><div class="n" style="color:var(--orange)">${mf}</div><div class="t">Fatura</div></div>
+        <div class="caller-stat"><div class="n" style="color:var(--green)">${mo}</div><div class="t">Ödeme</div></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function makeProgress(label,val,total,cls) {
+  const pct=total>0?Math.round(val/total*100):0;
+  return `<div class="progress-row">
+    <div class="progress-label">${label}</div>
+    <div class="progress-bar-wrap"><div class="progress-bar ${cls}" style="width:${pct}%"></div></div>
+    <div class="progress-count">${val}/${total}</div>
+  </div>`;
+}
+
+// ========== TABLE ==========
+let filteredData=[];
+function renderTable() { filteredData=[...DATA]; renderTableRows(); }
+function filterTable() {
+  const search=document.getElementById('search-input').value.toLowerCase();
+  const caller=document.getElementById('filter-caller').value;
+  const arandi=document.getElementById('filter-arandi').value;
+  const belge=document.getElementById('filter-belge').value;
+  const fatura=document.getElementById('filter-fatura').value;
+  const video=document.getElementById('filter-video').value;
+  const odeme=document.getElementById('filter-odeme').value;
+  filteredData=DATA.filter(d=>{
+    if(search&&!d.eczane_adi.toLowerCase().includes(search)&&!d.il.toLowerCase().includes(search)&&!d.eczaci.toLowerCase().includes(search)) return false;
+    if(caller&&d.arayacak_kisi!==caller) return false;
+    if(arandi&&d.arandi!==arandi) return false;
+    if(belge&&d.belgeler!==belge) return false;
+    if(fatura&&d.fatura!==fatura) return false;
+    if(video&&d.video_paylasim!==video) return false;
+    if(odeme&&d.odeme!==odeme) return false;
+    return true;
+  });
+  renderTableRows();
+}
+
+function renderTableRows() {
+  document.getElementById('row-count').textContent=`${filteredData.length} / ${DATA.length} eczane`;
+  document.getElementById('table-body').innerHTML=filteredData.map(d=>`
+    <tr>
+      <td class="mono" style="color:var(--gray)">${d.id}</td>
+      <td class="eczane-name">${d.eczane_adi}</td>
+      <td style="white-space:nowrap">${d.il}</td>
+      <td>${d.eczaci||'<span style="color:var(--gray)">—</span>'}</td>
+      <td class="mono">${d.eczaci_tel||'—'}</td>
+      <td style="font-size:11px">${d.md}</td>
+      <td><span class="badge ${d.ekran_2025.includes('EVET')?'badge-evet':'badge-hayir'}">${d.ekran_2025}</span></td>
+      <td class="mono">${parseInt(d.butce).toLocaleString('tr-TR')} ₺</td>
+      <td style="font-size:11.5px;white-space:nowrap">${d.arayacak_kisi}</td>
+      <td class="mono" style="white-space:nowrap">${d.tarih_araligi}</td>
+      <td>${statusBadge(d.saha_bilgi)}</td>
+      <td>${statusBadge(d.arandi)}</td>
+      <td>${teklifBadge(d.teklif)}</td>
+      <td class="mono">${d.revize_fiyat ? Number(String(d.revize_fiyat).replace(/[^0-9]/g,'')).toLocaleString('tr-TR')+' ₺' : '<span style="color:var(--gray)">—</span>'}</td>
+      <td style="font-size:11px">${d.yeniden_arama||'<span style="color:var(--gray)">—</span>'}</td>
+      <td>${statusBadge(d.belgeler)}</td>
+      <td>${statusBadge(d.video_paylasim)}</td>
+      <td>${statusBadge(d.fatura)}</td>
+      <td class="mono" style="font-size:11px">${d.fatura_tarihi||'—'}</td>
+      <td class="mono" style="font-size:11px">${d.vade_sonu ? vadeBadge(d.vade_sonu) : '—'}</td>
+      <td>${statusBadge(d.odeme)}</td>
+      <td style="font-size:11px">${d.ekran_cesidi||'—'}</td>
+      <td style="font-size:11px">${d.ekran_boyutu||'—'}</td>
+      <td><button class="btn btn-outline" style="padding:5px 10px;font-size:11px" onclick="openModal(${d.id})">✏️ Düzenle</button></td>
+    </tr>
+  `).join('');
+}
+
+function statusBadge(v) {
+  if(!v||v==='') return '<span class="badge badge-gray">—</span>';
+  if(v==='EVET') return '<span class="badge badge-evet">✓ EVET</span>';
+  if(v==='HAYIR') return '<span class="badge badge-hayir">✗ HAYIR</span>';
+  return `<span class="badge badge-gray">${v}</span>`;
+}
+function teklifBadge(v) {
+  if(!v) return '<span class="badge badge-gray">—</span>';
+  if(v==='KABUL') return '<span class="badge badge-evet">KABUL</span>';
+  if(v==='REVİZE') return '<span class="badge badge-bekliyor">REVİZE</span>';
+  if(v==='RET') return '<span class="badge badge-hayir">RET</span>';
+  return `<span class="badge badge-gray">${v}</span>`;
+}
+function vadeBadge(vade) {
+  const kalan = daysUntil(vade);
+  if (kalan === null) return vade;
+  if (kalan < 0) return `<span class="badge badge-hayir">${vade} (Geçti)</span>`;
+  if (kalan === 0) return `<span class="badge badge-hayir">BUGÜN!</span>`;
+  if (kalan <= 4) return `<span class="badge badge-bekliyor">${vade} (${kalan}g)</span>`;
+  return `<span class="badge badge-gray">${vade}</span>`;
+}
+
+// ========== MODAL ==========
+let modalId=null;
+function openModal(id) {
+  modalId=id;
+  const d=DATA.find(x=>x.id===id);
+  document.getElementById('modal-eczane-name').textContent=d.eczane_adi;
+  document.getElementById('modal-form').innerHTML=`
+    <div class="form-group"><label>Arayacak Kişi</label>
+      <select id="m-arayacak_kisi">
+        <option ${d.arayacak_kisi==='Nilay Boluğur'?'selected':''}>Nilay Boluğur</option>
+        <option ${d.arayacak_kisi==='Banu Ağabey'?'selected':''}>Banu Ağabey</option>
+        <option ${d.arayacak_kisi==='Vangel'?'selected':''}>Vangel</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Aranacak Tarih</label>
+      <input type="text" id="m-tarih_araligi" value="${d.tarih_araligi}" placeholder="GG.AA.YYYY">
+    </div>
+    <div class="form-group"><label>Ekran Çeşidi</label>
+      <select id="m-ekran_cesidi">
+        <option value="">—</option>
+        <option value="Yatay" ${d.ekran_cesidi==='Yatay'?'selected':''}>Yatay</option>
+        <option value="Dikey" ${d.ekran_cesidi==='Dikey'?'selected':''}>Dikey</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Ekran Boyutu</label>
+      <input type="text" id="m-ekran_boyutu" value="${d.ekran_boyutu||''}" placeholder='Örn: 55", 43"'>
+    </div>
+    <div class="form-group"><label>Saha Ekibi Bilgi Verdi mi?</label>
+      <select id="m-saha_bilgi">
+        <option value="">—</option>
+        <option value="EVET" ${d.saha_bilgi==='EVET'?'selected':''}>EVET</option>
+        <option value="HAYIR" ${d.saha_bilgi==='HAYIR'?'selected':''}>HAYIR</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Belirtilen Tarihte Arandı mı?</label>
+      <select id="m-arandi">
+        <option value="">—</option>
+        <option value="EVET" ${d.arandi==='EVET'?'selected':''}>EVET</option>
+        <option value="HAYIR" ${d.arandi==='HAYIR'?'selected':''}>HAYIR</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Teklif Durumu</label>
+      <select id="m-teklif" onchange="onTeklifChange()">
+        <option value="">—</option>
+        <option value="KABUL" ${d.teklif==='KABUL'?'selected':''}>KABUL ETTİ</option>
+        <option value="REVİZE" ${d.teklif==='REVİZE'?'selected':''}>REVİZE İSTEDİ</option>
+        <option value="RET" ${d.teklif==='RET'?'selected':''}>RET</option>
+      </select>
+    </div>
+    <div class="form-group" id="revize-group" style="${d.teklif==='REVİZE'?'':'opacity:0.4'}">
+      <label>Revize Fiyat Beklentisi (₺)</label>
+      <input type="text" id="m-revize_fiyat" value="${d.revize_fiyat||''}" placeholder="Örn: 15.000 ₺">
+    </div>
+    <div class="form-group"><label>Yeniden Arama Tarihi</label>
+      <input type="text" id="m-yeniden_arama" value="${d.yeniden_arama||''}" placeholder="GG.AA.YYYY">
+    </div>
+    <div class="form-group"><label>Belgeler Geldi mi?</label>
+      <select id="m-belgeler">
+        <option value="">—</option>
+        <option value="EVET" ${d.belgeler==='EVET'?'selected':''}>EVET</option>
+        <option value="HAYIR" ${d.belgeler==='HAYIR'?'selected':''}>HAYIR</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Video Paylaşımı Oldu mu?</label>
+      <select id="m-video_paylasim">
+        <option value="">—</option>
+        <option value="EVET" ${d.video_paylasim==='EVET'?'selected':''}>EVET</option>
+        <option value="HAYIR" ${d.video_paylasim==='HAYIR'?'selected':''}>HAYIR</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Fatura Kesildi mi?</label>
+      <select id="m-fatura">
+        <option value="">—</option>
+        <option value="EVET" ${d.fatura==='EVET'?'selected':''}>EVET</option>
+        <option value="HAYIR" ${d.fatura==='HAYIR'?'selected':''}>HAYIR</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Fatura Kesim Tarihi</label>
+      <input type="text" id="m-fatura_tarihi" value="${d.fatura_tarihi||''}" placeholder="GG.AA.YYYY" oninput="onFaturaTarihi()">
+    </div>
+    <div class="form-group"><label>Vade Sonu (Otomatik +90 gün)</label>
+      <input type="text" id="m-vade_sonu" value="${d.vade_sonu||''}" placeholder="Otomatik hesaplanır" readonly style="background:#f0ede8;color:var(--green);font-weight:600;">
+    </div>
+    <div class="form-group"><label>Ödeme Yapıldı mı?</label>
+      <select id="m-odeme">
+        <option value="">—</option>
+        <option value="EVET" ${d.odeme==='EVET'?'selected':''}>EVET</option>
+        <option value="HAYIR" ${d.odeme==='HAYIR'?'selected':''}>HAYIR</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Ödeme Süresi</label>
+      <input type="text" id="m-odeme_suresi" value="${d.odeme_suresi||''}" placeholder="Örn: 30 gün">
+    </div>
+    <div class="form-group full"><label>Notlar / Açıklamalar</label>
+      <textarea id="m-notlar">${d.notlar||''}</textarea>
+    </div>
+  `;
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+window.onTeklifChange = function() {
+  const v = document.getElementById('m-teklif').value;
+  const g = document.getElementById('revize-group');
+  if (g) g.style.opacity = v === 'REVİZE' ? '1' : '0.4';
+};
+
+window.onFaturaTarihi = function() {
+  const val = document.getElementById('m-fatura_tarihi').value;
+  const d = parseTR(val);
+  if (d) {
+    const vade = addDays(d, 90);
+    document.getElementById('m-vade_sonu').value = formatTR(vade);
+  } else {
+    document.getElementById('m-vade_sonu').value = '';
+  }
+};
+
+function closeModal() { document.getElementById('modal-overlay').classList.remove('open'); }
+
+async function saveModal() {
+  const d=DATA.find(x=>x.id===modalId);
+  const fields=['arayacak_kisi','tarih_araligi','ekran_cesidi','ekran_boyutu','saha_bilgi','arandi','teklif','revize_fiyat','yeniden_arama','belgeler','video_paylasim','fatura','fatura_tarihi','vade_sonu','odeme','odeme_suresi','notlar'];
+  fields.forEach(f=>{ const el=document.getElementById('m-'+f); if(el) d[f]=el.value; });
+  showLoading('Kaydediliyor...');
+  await saveOneToFirebase(d);
+  hideLoading();
+  closeModal();
+  renderTableRows();
+  renderDashboard();
+}
+
+// ========== GÖREV ==========
+function renderGorev() {
+  const callers=['Nilay Boluğur','Banu Ağabey'];
+  const dayNames=['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar'];
+
+  function buildCalendar(list, title, tel) {
+    const byDate={};
+    list.forEach(d=>{ if(!byDate[d.tarih_araligi]) byDate[d.tarih_araligi]=[]; byDate[d.tarih_araligi].push(d); });
+    const dates=Object.keys(byDate).sort((a,b)=>a.split('.').reverse().join('').localeCompare(b.split('.').reverse().join('')));
+    const daysHtml=dates.map(date=>{
+      const [dd,mm,yy]=date.split('.');
+      const dayName=dayNames[(new Date(+yy,+mm-1,+dd).getDay()+6)%7];
+      const items=byDate[date].map((p,i)=>`
+        <div class="gorev-item">
+          <span class="gorev-num">${i+1}</span>
+          <div><div class="gorev-name">${p.eczane_adi}</div>
+          <div class="gorev-il">${p.il} — ${statusBadge(p.arandi)}</div></div>
+        </div>`).join('');
+      return `<div class="gorev-day"><div class="gorev-day-header">${date} • ${dayName}</div>${items}</div>`;
+    }).join('');
+    return `<div class="gorev-col">
+      <div class="gorev-col-header"><h3>${title}</h3><p>${tel} — ${list.length} Eczane</p></div>
+      ${daysHtml||'<div style="padding:20px;color:var(--gray);font-size:13px">Henüz görev yok.</div>'}
+    </div>`;
+  }
+
+  // Normal görevler
+  const normalGrid = callers.map(c=>{
+    const mine=DATA.filter(d=>d.arayacak_kisi===c&&(!d.yeniden_arama||d.yeniden_arama.trim()===''));
+    return buildCalendar(mine, c, DATA.find(d=>d.arayacak_kisi===c)?.arayacak_tel||'');
+  }).join('');
+
+  // Yeniden aramalar (tarih_araligi yerine yeniden_arama tarihini kullan)
+  const yenidenList = DATA.filter(d=>d.yeniden_arama&&d.yeniden_arama.trim()!=='').map(d=>({...d, tarih_araligi: d.yeniden_arama}));
+  const yenidenByKisi = {};
+  yenidenList.forEach(d=>{ if(!yenidenByKisi[d.arayacak_kisi]) yenidenByKisi[d.arayacak_kisi]=[]; yenidenByKisi[d.arayacak_kisi].push(d); });
+
+  let yenidenHtml = '';
+  if (yenidenList.length > 0) {
+    yenidenHtml = `<div class="dash-section" style="margin-top:28px">
+      <div class="section-title">🔄 Yeniden Aramalar</div>
+      <div class="gorev-grid">
+        ${callers.map(c=>{
+          const list=yenidenByKisi[c]||[];
+          return buildCalendar(list, c+' — Yeniden Aramalar', DATA.find(d=>d.arayacak_kisi===c)?.arayacak_tel||'');
+        }).join('')}
+      </div>
+    </div>`;
+  } else {
+    yenidenHtml = `<div style="margin-top:24px;padding:16px 20px;background:var(--surface);border:1px solid var(--border);border-radius:10px;font-size:13px;color:var(--gray)">Henüz yeniden arama kaydı bulunmuyor.</div>`;
+  }
+
+  document.getElementById('gorev-grid').innerHTML = normalGrid;
+  document.getElementById('gorev-yeniden').innerHTML = yenidenHtml;
+}
+
+// ========== EXCEL EXPORT ==========
+function exportExcel() {
+  const wb=XLSX.utils.book_new();
+  // ---- SHEET 1: 2026 ECZANE LİSTESİ (birebir tablo sıralamasıyla) ----
+  const headers=[
+    'ECZANE ADI','BM','MD','MD CEP TEL','ECZACI ADI SOYADI','ECZACI TELEFONU','ECZANE ADRESİ','İL',
+    'BÜTÇE (₺)','VİDEO GÖRSELİ SÜRE','2025 EKRAN BÜTÇESİ',
+    'ARAYACAK KİŞİ','ARAYACAK KİŞİ CEP','ARANACAK TARİH',
+    'EKRAN ÇEŞİDİ','EKRAN BOYUTU',
+    'SAHA EKİBİ BİLGİ VERDİ Mİ','ARANDI MI','TEKLİF DURUMU','REVİZE FİYAT BEKLENTİSİ (₺)',
+    'YENİDEN ARAMA TARİHİ','BELGELER GELDİ Mİ','VİDEO PAYLAŞIMI OLDU MU',
+    'FATURA KESİLDİ Mİ','FATURA KESİM TARİHİ','VADE SONU TARİHİ',
+    'ÖDEMESİ YAPILDI MI','ÖDEME SÜRESİ','NOTLAR'
+  ];
+  const rows=DATA.map(d=>[
+    d.eczane_adi,d.bm,d.md,d.md_cep,d.eczaci,d.eczaci_tel,d.adres,d.il,
+    d.butce,d.video_sure,d.ekran_2025,
+    d.arayacak_kisi,d.arayacak_tel,d.tarih_araligi,
+    d.ekran_cesidi,d.ekran_boyutu,
+    d.saha_bilgi,d.arandi,d.teklif,d.revize_fiyat,
+    d.yeniden_arama,d.belgeler,d.video_paylasim,
+    d.fatura,d.fatura_tarihi,d.vade_sonu,
+    d.odeme,d.odeme_suresi,d.notlar
+  ]);
+  const ws=XLSX.utils.aoa_to_sheet([headers,...rows]);
+  ws['!cols']=headers.map(()=>({wch:20}));
+  XLSX.utils.book_append_sheet(wb,ws,'2026 ECZANE LİSTESİ');
+
+  // ---- SHEET 2: GÖREV TAKVİMİ ----
+  const s2h=['ARAYACAK KİŞİ','ARAYACAK CEP','ARANACAK TARİH','ECZANE ADI','İL','ECZACI','ECZACI TEL',
+    'SAHA BİLGİ VERDİ','ARANDI MI','TEKLİF','REVİZE FİYAT BEKLENTİSİ (₺)','YENİDEN ARAMA',
+    'BELGELER GELDİ','VİDEO PAYLAŞIM','FATURA KESİLDİ','FATURA TARİHİ','VADE SONU','ÖDEME YAPILDI','NOTLAR'];
+  const s2r=DATA.map(d=>[d.arayacak_kisi,d.arayacak_tel,d.tarih_araligi,d.eczane_adi,d.il,d.eczaci,d.eczaci_tel,
+    d.saha_bilgi,d.arandi,d.teklif,d.revize_fiyat,d.yeniden_arama,
+    d.belgeler,d.video_paylasim,d.fatura,d.fatura_tarihi,d.vade_sonu,d.odeme,d.notlar]);
+  const ws2=XLSX.utils.aoa_to_sheet([s2h,...s2r]);
+  ws2['!cols']=s2h.map(()=>({wch:18}));
+  XLSX.utils.book_append_sheet(wb,ws2,'Görev Takvimi');
+
+  const yeniden=DATA.filter(d=>d.yeniden_arama&&d.yeniden_arama.trim()!=='');
+  if(yeniden.length>0){
+    // ---- SHEET 3: YENİDEN ARAMALAR ----
+    const s3h=['ARAYACAK KİŞİ','YENİDEN ARAMA TARİHİ','ECZANE ADI','İL','ECZACI','ECZACI TEL','TEKLİF DURUMU','REVİZE FİYAT (₺)','BELGELER','VİDEO PAYLAŞIM','FATURA','FATURA TARİHİ','VADE SONU','ÖDEME','NOTLAR'];
+    const ws3=XLSX.utils.aoa_to_sheet([s3h,...yeniden.map(d=>[d.arayacak_kisi,d.yeniden_arama,d.eczane_adi,d.il,d.eczaci,d.eczaci_tel,d.teklif,d.revize_fiyat,d.belgeler,d.video_paylasim,d.fatura,d.fatura_tarihi,d.vade_sonu,d.odeme,d.notlar])]);
+    ws3['!cols']=s3h.map(()=>({wch:18}));
+    XLSX.utils.book_append_sheet(wb,ws3,'Yeniden Aramalar');
+  }
+
+  const total=DATA.length;
+  // ---- SHEET 4: ÖZET RAPOR ----
+  const summary=[
+    ['EKRAN BÜTÇESİ TAKİP SİSTEMİ 2026 — ÖZET RAPOR',''],
+    ['Oluşturulma Tarihi:',new Date().toLocaleString('tr-TR')],
+    ['',''],
+    ['GENEL DURUM','SAYI'],
+    ['Toplam Eczane',total],
+    ['Aranan Eczane',DATA.filter(d=>d.arandi==='EVET').length],
+    ['Aranmayan Eczane',DATA.filter(d=>d.arandi!=='EVET').length],
+    ['Saha Ekibi Bilgi Verdi',DATA.filter(d=>d.saha_bilgi==='EVET').length],
+    ['',''],
+    ['TEKLİF DURUMU','SAYI'],
+    ['Teklif Kabul',DATA.filter(d=>d.teklif==='KABUL').length],
+    ['Teklif Revize İstedi',DATA.filter(d=>d.teklif==='REVİZE').length],
+    ['Teklif Ret',DATA.filter(d=>d.teklif==='RET').length],
+    ['Yeniden Arama Gerekti',DATA.filter(d=>d.yeniden_arama&&d.yeniden_arama.trim()!=='').length],
+    ['',''],
+    ['BELGELER & VİDEO','SAYI'],
+    ['Belgeler Geldi',DATA.filter(d=>d.belgeler==='EVET').length],
+    ['Belgeler Gelmedi',DATA.filter(d=>d.belgeler==='HAYIR').length],
+    ['Video Paylaşıldı',DATA.filter(d=>d.video_paylasim==='EVET').length],
+    ['Video Paylaşılmadı',DATA.filter(d=>d.video_paylasim==='HAYIR').length],
+    ['',''],
+    ['FATURA & ÖDEME','SAYI'],
+    ['Fatura Kesildi',DATA.filter(d=>d.fatura==='EVET').length],
+    ['Fatura Kesilmedi',DATA.filter(d=>d.fatura==='HAYIR').length],
+    ['Vadesi Yaklaşan (4 gün)',DATA.filter(d=>{const k=daysUntil(d.vade_sonu);return k!==null&&k>=0&&k<=4;}).length],
+    ['Ödeme Yapıldı',DATA.filter(d=>d.odeme==='EVET').length],
+    ['Ödeme Yapılmadı',DATA.filter(d=>d.odeme==='HAYIR').length],
+    ['',''],
+    ['EKRAN BİLGİSİ','SAYI'],
+    ['Yatay Ekran',DATA.filter(d=>d.ekran_cesidi==='Yatay').length],
+    ['Dikey Ekran',DATA.filter(d=>d.ekran_cesidi==='Dikey').length],
+    ['',''],
+    ['KİŞİ BAZLI DURUM','SAYI'],
+    ['Nilay Boluğur — Toplam',DATA.filter(d=>d.arayacak_kisi==='Nilay Boluğur').length],
+    ['Nilay Boluğur — Aranan',DATA.filter(d=>d.arayacak_kisi==='Nilay Boluğur'&&d.arandi==='EVET').length],
+    ['Nilay Boluğur — Belgeler',DATA.filter(d=>d.arayacak_kisi==='Nilay Boluğur'&&d.belgeler==='EVET').length],
+    ['Nilay Boluğur — Fatura',DATA.filter(d=>d.arayacak_kisi==='Nilay Boluğur'&&d.fatura==='EVET').length],
+    ['Nilay Boluğur — Ödeme',DATA.filter(d=>d.arayacak_kisi==='Nilay Boluğur'&&d.odeme==='EVET').length],
+    ['Banu Ağabey — Toplam',DATA.filter(d=>d.arayacak_kisi==='Banu Ağabey').length],
+    ['Banu Ağabey — Aranan',DATA.filter(d=>d.arayacak_kisi==='Banu Ağabey'&&d.arandi==='EVET').length],
+    ['Banu Ağabey — Belgeler',DATA.filter(d=>d.arayacak_kisi==='Banu Ağabey'&&d.belgeler==='EVET').length],
+    ['Banu Ağabey — Fatura',DATA.filter(d=>d.arayacak_kisi==='Banu Ağabey'&&d.fatura==='EVET').length],
+    ['Banu Ağabey — Ödeme',DATA.filter(d=>d.arayacak_kisi==='Banu Ağabey'&&d.odeme==='EVET').length],
+  ];
+  const ws4=XLSX.utils.aoa_to_sheet(summary);
+  ws4['!cols']=[{wch:35},{wch:20}];
+  XLSX.utils.book_append_sheet(wb,ws4,'Özet Rapor');
+  XLSX.writeFile(wb,`EkranButce_${new Date().toLocaleDateString('tr-TR').replace(/\./g,'-')}.xlsx`);
+}
+
+document.getElementById('login-pass').addEventListener('keydown',e=>{ if(e.key==='Enter') window.doLogin(); });
+</script>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
+:root{--bg:#f0ede8;--surface:#faf8f5;--surface2:#f2efe9;--border:#e0dbd2;--accent:#1a1a2e;--accent2:#16213e;--green:#2d6a4f;--green-light:#d8f3dc;--red:#9b2335;--red-light:#ffe8ec;--orange:#c47c00;--orange-light:#fff3cd;--blue:#1d4e89;--blue-light:#dbeafe;--gray:#6b7280;--text:#1a1a1a;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+#loading-overlay{display:none;position:fixed;inset:0;background:rgba(26,26,46,0.85);z-index:9999;align-items:center;justify-content:center;flex-direction:column;gap:16px;}
+.loading-spinner{width:40px;height:40px;border:3px solid rgba(255,255,255,0.2);border-top-color:white;border-radius:50%;animation:spin 0.8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+#loading-msg{color:white;font-size:14px;font-weight:500;}
+#login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--accent);}
+.login-box{background:var(--surface);border-radius:16px;padding:48px 40px;width:380px;box-shadow:0 20px 60px rgba(0,0,0,0.3);}
+.login-logo{text-align:center;margin-bottom:32px;}
+.login-logo h1{font-size:22px;font-weight:700;color:var(--accent);}
+.login-logo p{font-size:12px;color:var(--gray);margin-top:4px;font-family:'DM Mono',monospace;}
+.login-box label{display:block;font-size:12px;font-weight:600;color:var(--gray);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;}
+.login-box input{width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;background:var(--bg);margin-bottom:16px;outline:none;}
+.login-box input:focus{border-color:var(--accent);}
+.login-btn{width:100%;padding:14px;background:var(--accent);color:white;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:600;cursor:pointer;}
+.login-error{color:var(--red);font-size:13px;text-align:center;margin-top:10px;}
+#app{display:none;}
+.topbar{background:var(--accent);color:white;padding:0 28px;display:flex;align-items:center;justify-content:space-between;height:58px;position:sticky;top:0;z-index:100;}
+.topbar-title{font-size:16px;font-weight:700;}
+.topbar-title span{font-family:'DM Mono',monospace;font-size:11px;opacity:0.6;margin-left:10px;}
+.topbar-right{display:flex;align-items:center;gap:12px;}
+.user-badge{font-size:12px;opacity:0.7;}
+.logout-btn{background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.2);color:white;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-family:'DM Sans',sans-serif;}
+.sync-badge{font-size:11px;background:rgba(45,106,79,0.8);color:#d8f3dc;padding:4px 10px;border-radius:20px;font-family:'DM Mono',monospace;}
+.tabs{background:var(--surface);border-bottom:1px solid var(--border);padding:0 28px;display:flex;overflow-x:auto;}
+.tab{padding:14px 20px;font-size:13px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;color:var(--gray);transition:all 0.2s;white-space:nowrap;}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:600;}
+.page{display:none;padding:24px 28px;}
+.page.active{display:block;}
+
+/* VADE UYARI */
+.vade-uyari-box{background:#fff8e1;border:2px solid #c47c00;border-radius:12px;padding:16px 20px;margin-bottom:20px;}
+.vade-uyari-title{font-size:13px;font-weight:700;color:#c47c00;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px;}
+.vade-uyari-item{display:flex;align-items:center;gap:12px;padding:8px 12px;background:white;border-radius:8px;margin-bottom:8px;font-size:13px;}
+.vade-uyari-item:last-child{margin-bottom:0;}
+.vade-uyari-item strong{min-width:180px;}
+.vade-uyari-item span{flex:1;}
+
+.dash-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;margin-bottom:28px;}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px 20px;cursor:pointer;transition:all 0.15s;}
+.stat-card:hover{transform:translateY(-2px);box-shadow:0 4px 16px rgba(0,0,0,0.08);}
+.stat-card .val{font-size:32px;font-weight:700;font-family:'DM Mono',monospace;line-height:1;}
+.stat-card .lbl{font-size:11px;color:var(--gray);margin-top:6px;font-weight:500;text-transform:uppercase;letter-spacing:0.4px;}
+.stat-card.green .val{color:var(--green);}
+.stat-card.red .val{color:var(--red);}
+.stat-card.orange .val{color:var(--orange);}
+.stat-card.blue .val{color:var(--blue);}
+.dash-section{margin-bottom:28px;}
+.section-title{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:var(--gray);margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+.section-title::after{content:'';flex:1;height:1px;background:var(--border);}
+.progress-block{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;}
+.progress-row{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
+.progress-row:last-child{margin-bottom:0;}
+.progress-label{font-size:12px;width:180px;font-weight:500;}
+.progress-bar-wrap{flex:1;background:var(--border);border-radius:4px;height:8px;overflow:hidden;}
+.progress-bar{height:100%;border-radius:4px;transition:width 0.5s;}
+.progress-bar.green{background:var(--green);}
+.progress-bar.blue{background:var(--blue);}
+.progress-bar.orange{background:var(--orange);}
+.progress-count{font-size:12px;font-family:'DM Mono',monospace;width:50px;text-align:right;font-weight:600;}
+.caller-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.caller-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px 20px;}
+.caller-name{font-size:15px;font-weight:700;margin-bottom:4px;}
+.caller-tel{font-size:12px;color:var(--gray);font-family:'DM Mono',monospace;margin-bottom:12px;}
+.caller-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.caller-stat{background:var(--bg);border-radius:8px;padding:10px 12px;}
+.caller-stat .n{font-size:20px;font-weight:700;font-family:'DM Mono',monospace;}
+.caller-stat .t{font-size:10px;color:var(--gray);text-transform:uppercase;letter-spacing:0.4px;}
+.toolbar{display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap;}
+.search-input{padding:9px 14px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;background:var(--surface);outline:none;width:200px;}
+.search-input:focus{border-color:var(--accent);}
+select.filter-select{padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;background:var(--surface);outline:none;cursor:pointer;}
+.btn{padding:9px 16px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all 0.15s;}
+.btn-primary{background:var(--accent);color:white;}
+.btn-success{background:var(--green);color:white;}
+.btn-outline{background:var(--surface);color:var(--text);border:1.5px solid var(--border);}
+.table-wrap{overflow-x:auto;background:var(--surface);border:1px solid var(--border);border-radius:12px;}
+table{width:100%;border-collapse:collapse;font-size:12.5px;}
+thead{background:var(--accent);color:white;}
+thead th{padding:11px 12px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;white-space:nowrap;}
+tbody tr{border-bottom:1px solid var(--border);transition:background 0.1s;}
+tbody tr:hover{background:var(--bg);}
+tbody tr:last-child{border-bottom:none;}
+td{padding:10px 12px;vertical-align:middle;}
+td.eczane-name{font-weight:600;min-width:150px;}
+td.mono{font-family:'DM Mono',monospace;font-size:11.5px;}
+.badge{display:inline-block;padding:3px 8px;border-radius:20px;font-size:10.5px;font-weight:600;white-space:nowrap;}
+.badge-evet{background:var(--green-light);color:var(--green);}
+.badge-hayir{background:var(--red-light);color:var(--red);}
+.badge-bekliyor{background:var(--orange-light);color:var(--orange);}
+.badge-gray{background:var(--surface2);color:var(--gray);border:1px solid var(--border);}
+.row-count{font-size:12px;color:var(--gray);margin-left:auto;}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--surface);border-radius:16px;padding:32px;width:720px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.2);}
+.modal-title{font-size:18px;font-weight:700;margin-bottom:24px;color:var(--accent);}
+.modal-close{float:right;cursor:pointer;font-size:20px;color:var(--gray);margin-top:-4px;}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.form-group{display:flex;flex-direction:column;gap:5px;}
+.form-group.full{grid-column:1/-1;}
+.form-group label{font-size:11px;font-weight:600;color:var(--gray);text-transform:uppercase;letter-spacing:0.4px;}
+.form-group select,.form-group input{padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;background:var(--bg);outline:none;}
+.form-group select:focus,.form-group input:focus{border-color:var(--accent);}
+.form-group textarea{padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;background:var(--bg);outline:none;resize:vertical;min-height:70px;}
+.modal-footer{display:flex;gap:10px;justify-content:flex-end;margin-top:24px;padding-top:16px;border-top:1px solid var(--border);}
+.gorev-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+.gorev-col{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+.gorev-col-header{padding:16px 20px;background:var(--accent);color:white;}
+.gorev-col-header h3{font-size:14px;font-weight:700;}
+.gorev-col-header p{font-size:11px;opacity:0.7;margin-top:2px;font-family:'DM Mono',monospace;}
+.gorev-day-header{padding:10px 16px;background:var(--bg);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--gray);}
+.gorev-item{padding:10px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;}
+.gorev-item:last-child{border-bottom:none;}
+.gorev-num{font-size:10px;font-family:'DM Mono',monospace;color:var(--gray);min-width:20px;}
+.gorev-name{font-size:13px;font-weight:600;}
+.gorev-il{font-size:11px;color:var(--gray);}
+.export-section{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:28px;max-width:500px;}
+.export-section h3{font-size:16px;font-weight:700;margin-bottom:8px;}
+.export-section p{font-size:13px;color:var(--gray);margin-bottom:20px;line-height:1.6;}
+@media(max-width:768px){.dash-grid{grid-template-columns:repeat(2,1fr);}.caller-grid{grid-template-columns:1fr;}.gorev-grid{grid-template-columns:1fr;}.form-grid{grid-template-columns:1fr;}.page{padding:16px;}}
+</style>
+</head>
+<body>
+
+<div id="loading-overlay"><div class="loading-spinner"></div><div id="loading-msg">Yükleniyor...</div></div>
+
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo"><h1>🏥 Ekran Bütçe Takip</h1><p>2026 ECZANE YÖNETİM SİSTEMİ</p></div>
+    <label>E-posta</label>
+    <input type="email" id="login-email" placeholder="email@domain.com" autocomplete="email">
+    <label>Şifre</label>
+    <input type="password" id="login-pass" placeholder="••••••••">
+    <button class="login-btn" onclick="doLogin()">Giriş Yap</button>
+    <div class="login-error" id="login-err"></div>
+  </div>
+</div>
+
+<div id="app">
+  <div class="topbar">
+    <div class="topbar-title">Ekran Bütçe Takip 2026 <span id="user-label"></span></div>
+    <div class="topbar-right">
+      <span class="sync-badge">🟢 Firebase Canlı</span>
+      <span class="user-badge" id="user-email-badge"></span>
+      <button class="logout-btn" onclick="doLogout()">Çıkış</button>
+    </div>
+  </div>
+  <div class="tabs">
+    <div class="tab active" onclick="showPage('dashboard')">📊 Dashboard</div>
+    <div class="tab" onclick="showPage('tablo')">📋 Eczane Listesi</div>
+    <div class="tab" onclick="showPage('gorev')">📅 Görev Takvimi</div>
+    <div class="tab" onclick="showPage('export')">⬇️ Excel Export</div>
+  </div>
+
+  <div class="page active" id="page-dashboard">
+    <div id="dash-uyari"></div>
+    <div class="dash-grid" id="stat-cards"></div>
+    <div class="dash-section"><div class="section-title">İlerleme Durumu</div><div class="progress-block" id="progress-block"></div></div>
+    <div class="dash-section"><div class="section-title">Kişi Bazlı Takip</div><div class="caller-grid" id="caller-cards"></div></div>
+  </div>
+
+  <div class="page" id="page-tablo">
+    <div class="toolbar">
+      <input type="text" class="search-input" placeholder="🔍 Eczane ara..." oninput="filterTable()" id="search-input">
+      <select class="filter-select" onchange="filterTable()" id="filter-caller">
+        <option value="">Tüm Kişiler</option>
+        <option>Nilay Boluğur</option>
+        <option>Banu Ağabey</option>
+        <option>Vangel</option>
+      </select>
+      <select class="filter-select" onchange="filterTable()" id="filter-arandi">
+        <option value="">Aranma Durumu</option>
+        <option value="EVET">Arananlar</option>
+        <option value="HAYIR">Aranmayanlar</option>
+      </select>
+      <select class="filter-select" onchange="filterTable()" id="filter-belge">
+        <option value="">Belge Durumu</option>
+        <option value="EVET">Belgeler Geldi</option>
+        <option value="HAYIR">Gelmedi</option>
+      </select>
+      <select class="filter-select" onchange="filterTable()" id="filter-fatura">
+        <option value="">Fatura Durumu</option>
+        <option value="EVET">Fatura Kesildi</option>
+        <option value="HAYIR">Kesilmedi</option>
+      </select>
+      <select class="filter-select" onchange="filterTable()" id="filter-video">
+        <option value="">Video Durumu</option>
+        <option value="EVET">Video Paylaşıldı</option>
+        <option value="HAYIR">Paylaşılmadı</option>
+      </select>
+      <select class="filter-select" onchange="filterTable()" id="filter-odeme">
+        <option value="">Ödeme Durumu</option>
+        <option value="EVET">Ödeme Yapıldı</option>
+        <option value="HAYIR">Yapılmadı</option>
+      </select>
+      <span class="row-count" id="row-count"></span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>#</th><th>ECZANE ADI</th><th>İL</th><th>ECZACI</th><th>ECZACI TEL</th>
+          <th>MD</th><th>2025</th><th>BÜTÇE ₺</th><th>ARAYACAK KİŞİ</th>
+          <th>ARANACAK TARİH</th><th>SAHA BİLGİ</th><th>ARANDI MI</th><th>TEKLİF</th><th>REVİZE TEKLİFİ ₺</th>
+          <th>YENİDEN ARAMA</th><th>BELGELER</th><th>VİDEO</th><th>FATURA</th>
+          <th>FATURA TARİHİ</th><th>VADE SONU</th><th>ÖDEME</th>
+          <th>EKRAN ÇEŞİDİ</th><th>EKRAN BOYUTU</th><th>İŞLEM</th>
+        </tr></thead>
+        <tbody id="table-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="page" id="page-gorev">
+    <div style="margin-bottom:16px;"><p style="font-size:13px;color:var(--gray);">Pazartesi–Cumartesi 09:00–19:00 / Pazar günleri kapalı.</p></div>
+    <div class="gorev-grid" id="gorev-grid"></div>
+    <div id="gorev-yeniden"></div>
+  </div>
+
+  <div class="page" id="page-export">
+    <div class="export-section">
+      <h3>📥 Excel Raporu Al</h3>
+      <p>Tüm eczanelerin güncel durumu orijinal formatla indirilir. Fatura tarihleri, vade sonları, ekran bilgileri, yeniden aramalar ve özet rapor dahildir.</p>
+      <button class="btn btn-success" style="width:100%;padding:14px;" onclick="exportExcel()">⬇️ Mevcut Durumu Excel Olarak İndir</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <div class="modal-title"><span class="modal-close" onclick="closeModal()">✕</span><span id="modal-eczane-name"></span></div>
+    <div class="form-grid" id="modal-form"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal()">İptal</button>
+      <button class="btn btn-primary" onclick="saveModal()">💾 Kaydet</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
